@@ -5,8 +5,6 @@
 uint16_t neutralSTE = 1500;
 uint16_t neutralTHR = 1500;
 const uint16_t TOLERANCE = 50;
-const uint16_t NPT = neutralSTE + TOLERANCE;
-const uint16_t NMT = neutralSTE - TOLERANCE;
 const uint16_t AREA = 1000;
 const uint16_t HAREA = AREA / 2;
 
@@ -24,7 +22,10 @@ const byte D8 = 8;
 const byte PIN_RC_STE = D7;
 const byte PIN_RC_THR = D8;
 
-int8_t rotation = 1;
+const int8_t UP = 1;
+const int8_t DOWN = -UP;
+
+int8_t rotation = UP;
 
 RCReceive steReceive;
 RCReceive thrReceive;
@@ -42,8 +43,8 @@ void setup()
   lMotor.attach(PIN_CTR_L);
   rMotor.attach(PIN_CTR_R);
 
-  steReceive.attachInt(PIN_RC_STE);
-  thrReceive.attachInt(PIN_RC_THR);
+  steReceive.attach(PIN_RC_STE);
+  thrReceive.attach(PIN_RC_THR);
 
   GyroscopeIMU.begin();
 
@@ -53,7 +54,6 @@ void setup()
 
 void loop()
 {
-  // Read current RC value
   steReceive.poll();
   thrReceive.poll();
 
@@ -77,11 +77,11 @@ void doWork()
 
   if (GyroscopeIMU.readFloatAccelZ() > 0)
   {
-    rotation = 1;
+    rotation = UP;
   }
   else
   {
-    rotation = -1;
+    rotation = DOWN;
   }
 
   Serial.print((int)ste);
@@ -98,7 +98,7 @@ void doWork()
 
 int16_t calcMotorLSpeed(float ste, float thr)
 {
-  float motor = calcMotorSpeed(ste, thr, 1);
+  float motor = calcMotorSpeed(ste, thr, UP);
   if (motor < 1500)
   {
     return 1500;
@@ -108,7 +108,7 @@ int16_t calcMotorLSpeed(float ste, float thr)
 
 int16_t calcMotorRSpeed(float ste, float thr)
 {
-  float motor = calcMotorSpeed(ste, thr, -1);
+  float motor = calcMotorSpeed(ste, thr, DOWN);
   if (motor > 1500)
   {
     return 1500;
@@ -118,7 +118,7 @@ int16_t calcMotorRSpeed(float ste, float thr)
 
 float calcMotorSpeed(float ste, float thr, int8_t fac)
 {
-  if (ste < NPT && ste > NMT && thr < NPT && thr > NMT)
+  if (thr < neutralTHR + TOLERANCE && thr > neutralTHR - TOLERANCE)
     return 1500;
 
   float thrfactor;
