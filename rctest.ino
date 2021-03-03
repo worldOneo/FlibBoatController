@@ -1,5 +1,5 @@
 #include <Servo.h>
-#include "RCReceive.h"
+#include "RCReceiver.h"
 #include "SparkFunLSM6DS3.h"
 
 uint16_t neutralSTE = 1500;
@@ -15,8 +15,8 @@ const byte D10 = 10;
 const byte PIN_CTR_R = D9;
 const byte PIN_CTR_L = D10;
 
-const byte D7 = 7;
-const byte D8 = 8;
+const byte D7 = 2;
+const byte D8 = 3;
 
 //PIN_RC = Receiving pins for the Remote
 const byte PIN_RC_STE = D7;
@@ -27,53 +27,53 @@ const int8_t DOWN = -UP;
 
 int8_t rotation = UP;
 
-RCReceive steReceive;
-RCReceive thrReceive;
+RCReceiver steReceive;
+RCReceiver thrReceive;
 LSM6DS3 GyroscopeIMU;
 Servo lMotor;
 Servo rMotor;
 
+long ms = 0;
+
 void setup()
 {
   Serial.begin(9600);
+  Serial.println("FlipBoatController");
 
   pinMode(PIN_RC_STE, INPUT);
   pinMode(PIN_RC_THR, INPUT);
+  Serial.println("Attaching motors");
+
 
   lMotor.attach(PIN_CTR_L);
   rMotor.attach(PIN_CTR_R);
+  Serial.println("Attaching receivers");
+
 
   steReceive.attach(PIN_RC_STE);
   thrReceive.attach(PIN_RC_THR);
 
+  Serial.println("Attaching gyroscope");
+
   GyroscopeIMU.begin();
 
+  Serial.println("initialzing motors");
   lMotor.writeMicroseconds(neutralSTE);
   rMotor.writeMicroseconds(neutralSTE);
+
+  Serial.println("done");
+
 }
 
 void loop()
 {
-  steReceive.poll();
-  thrReceive.poll();
-
-  if (steReceive.hasNP() && !steReceive.hasError())
-  {
-    doWork();
-  }
-  else if (steReceive.hasError())
-  {
-    Serial.println("Failed to read RC");
-  }
+  doWork();
 }
 
 void doWork()
 {
-  int16_t ste = steReceive.getMsValue();
-  int16_t thr = thrReceive.getMsValue();
-
-  neutralSTE = steReceive.getMSNP();
-  neutralTHR = thrReceive.getMSNP();
+  int16_t ste = steReceive.getValue();
+  int16_t thr = thrReceive.getValue();
 
   if (GyroscopeIMU.readFloatAccelZ() > 0)
   {
@@ -83,17 +83,13 @@ void doWork()
   {
     rotation = DOWN;
   }
-
-  Serial.print((int)ste);
-  Serial.print(" ");
-  Serial.print((int)thr);
-  Serial.print(" ");
-  Serial.print(calcMotorLSpeed(ste, thr));
-  Serial.print(" ");
-  Serial.print(calcMotorRSpeed(ste, thr));
-  Serial.println();
-  lMotor.writeMicroseconds(calcMotorLSpeed(ste, thr));
-  rMotor.writeMicroseconds(calcMotorRSpeed(ste, thr));
+  if (millis() - ms > 19)
+  {
+    Serial.println(millis() - ms);
+    ms = millis();
+    lMotor.writeMicroseconds(calcMotorLSpeed(ste, thr));
+    rMotor.writeMicroseconds(calcMotorRSpeed(ste, thr));
+  }
 }
 
 int16_t calcMotorLSpeed(float ste, float thr)
