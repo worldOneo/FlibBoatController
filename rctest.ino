@@ -15,12 +15,12 @@ const byte D10 = 10;
 const byte PIN_CTR_R = D9;
 const byte PIN_CTR_L = D10;
 
-const byte D7 = 2;
-const byte D8 = 3;
+const byte D2 = 2;
+const byte D3 = 3;
 
 //PIN_RC = Receiving pins for the Remote
-const byte PIN_RC_STE = D7;
-const byte PIN_RC_THR = D8;
+const byte PIN_RC_STE = D2;
+const byte PIN_RC_THR = D3;
 
 const int8_t UP = 1;
 const int8_t DOWN = -UP;
