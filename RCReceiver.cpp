@@ -3,19 +3,17 @@
 
 void pinStatusChange(RCReceiver *rc)
 {
-  cli();
+  noInterrupts();
+
   if (digitalRead(rc->getPin()) == HIGH)
-  {
     rc->impulseStart();
-  }
   else
-  {
     rc->impulseStop();
-  }
-  sei();
+
+  interrupts();
 }
 
-void RCReceiver::attach(pin_size_t pin)
+void RCReceiver::attach(uint8_t pin)
 {
   attachInterrupt(pin, pinStatusChange, CHANGE, this);
   this->pin = pin;

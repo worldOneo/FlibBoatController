@@ -1,9 +1,10 @@
 #include <Servo.h>
 #include "RCReceiver.h"
 #include "SparkFunLSM6DS3.h"
+#include <math.h>
 
-uint16_t neutralSTE = 1500;
-uint16_t neutralTHR = 1500;
+const uint16_t NEUTRAL_STE = 1500;
+const uint16_t NEUTRAL_THR = 1500;
 const uint16_t TOLERANCE = 50;
 const uint16_t AREA = 1000;
 const uint16_t HAREA = AREA / 2;
@@ -44,11 +45,9 @@ void setup()
   pinMode(PIN_RC_THR, INPUT);
   Serial.println("Attaching motors");
 
-
   lMotor.attach(PIN_CTR_L);
   rMotor.attach(PIN_CTR_R);
   Serial.println("Attaching receivers");
-
 
   steReceive.attach(PIN_RC_STE);
   thrReceive.attach(PIN_RC_THR);
@@ -58,69 +57,50 @@ void setup()
   GyroscopeIMU.begin();
 
   Serial.println("initialzing motors");
-  lMotor.writeMicroseconds(neutralSTE);
-  rMotor.writeMicroseconds(neutralSTE);
+  lMotor.writeMicroseconds(NEUTRAL_STE);
+  rMotor.writeMicroseconds(NEUTRAL_STE);
 
   Serial.println("done");
-
 }
 
 void loop()
-{
-  doWork();
-}
-
-void doWork()
 {
   int16_t ste = steReceive.getValue();
   int16_t thr = thrReceive.getValue();
 
   if (GyroscopeIMU.readFloatAccelZ() > 0)
-  {
     rotation = UP;
-  }
   else
-  {
     rotation = DOWN;
-  }
-  if (millis() - ms > 19)
-  {
-    Serial.println(millis() - ms);
-    ms = millis();
-    lMotor.writeMicroseconds(calcMotorLSpeed(ste, thr));
-    rMotor.writeMicroseconds(calcMotorRSpeed(ste, thr));
-  }
+
+  if (millis() - ms < 19)
+    return;
+
+  Serial.println(millis() - ms);
+  ms = millis();
+  lMotor.writeMicroseconds(calcMotorLSpeed(ste, thr));
+  rMotor.writeMicroseconds(calcMotorRSpeed(ste, thr));
 }
 
 int16_t calcMotorLSpeed(float ste, float thr)
 {
   float motor = calcMotorSpeed(ste, thr, UP);
-  if (motor < 1500)
-  {
-    return 1500;
-  }
-  return min(motor, 2000);
+  return max(min(motor, 2000), 1500);
 }
 
 int16_t calcMotorRSpeed(float ste, float thr)
 {
   float motor = calcMotorSpeed(ste, thr, DOWN);
-  if (motor > 1500)
-  {
-    return 1500;
-  }
-  return max(motor, 1000);
+  return min(max(motor, 1000), 1500);
 }
 
 float calcMotorSpeed(float ste, float thr, int8_t fac)
 {
-  if (thr < neutralTHR + TOLERANCE && thr > neutralTHR - TOLERANCE)
+  if (fabs(thr - NEUTRAL_THR) < TOLERANCE)
     return 1500;
 
-  float thrfactor;
-  float stefactor;
+  float thrfactor = ((thr - NEUTRAL_THR) / HAREA);
+  float stefactor = 1 - ((ste - NEUTRAL_STE) / HAREA) * (rotation * fac);
 
-  thrfactor = ((thr - neutralTHR) / HAREA);
-  stefactor = 1 - ((ste - neutralSTE) / HAREA) * (rotation * fac);
   return 1500 + thrfactor * stefactor * HAREA * fac;
 }
